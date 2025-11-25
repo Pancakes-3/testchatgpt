@@ -163,6 +163,15 @@ function sanitizeNumbers() {
     const value = Number(state[key]);
     state[key] = Number.isFinite(value) ? value : fallback;
   });
+
+  const sanitizeMap = (map) => {
+    for (const key of Object.keys(map || {})) {
+      const value = Number(map[key]);
+      map[key] = Number.isFinite(value) && value >= 0 ? value : 0;
+    }
+  };
+  sanitizeMap(state.upgrades);
+  sanitizeMap(state.producers);
 }
 
 function saveState() {
@@ -401,19 +410,19 @@ function renderStats() {
     <div class="stats-grid">
       <div class="stat-box">
         <div class="label">Total Pancakes Earned</div>
-        <div class="value">${format(state.totalPancakes)}</div>
+        <div class="value" id="stat-total-earned">${format(state.totalPancakes)}</div>
       </div>
       <div class="stat-box">
         <div class="label">Upgrades Owned</div>
-        <div class="value">${Object.values(state.upgrades).reduce((a, b) => a + b, 0)}</div>
+        <div class="value" id="stat-upgrades">${Object.values(state.upgrades).reduce((a, b) => a + b, 0)}</div>
       </div>
       <div class="stat-box">
         <div class="label">Producers Owned</div>
-        <div class="value">${Object.values(state.producers).reduce((a, b) => a + b, 0)}</div>
+        <div class="value" id="stat-producers">${Object.values(state.producers).reduce((a, b) => a + b, 0)}</div>
       </div>
       <div class="stat-box">
         <div class="label">Prestige Points</div>
-        <div class="value">${state.prestigePoints}</div>
+        <div class="value" id="stat-prestige">${state.prestigePoints}</div>
       </div>
     </div>
   `;
@@ -455,14 +464,31 @@ function renderSettings() {
 
 function render() {
   updatePerSecond();
-  elements.pancakeCount.textContent = format(state.pancakes);
-  elements.pps.textContent = `${state.perSecond.toFixed(1)} /s`;
-  elements.prestigeBonus.textContent = `x${state.prestigeBonus.toFixed(2)}`;
-  elements.clickValue.textContent = `+${getClickValue().toFixed(1)} per click`;
+  updateHUDNumbers();
   renderUpgrades();
   renderProducers();
   renderPrestige();
   renderStats();
+  lastRenderAt = Date.now();
+}
+
+let lastRenderAt = 0;
+
+function updateHUDNumbers() {
+  elements.pancakeCount.textContent = format(state.pancakes);
+  elements.pps.textContent = `${state.perSecond.toFixed(1)} /s`;
+  elements.prestigeBonus.textContent = `x${state.prestigeBonus.toFixed(2)}`;
+  elements.clickValue.textContent = `+${getClickValue().toFixed(1)} per click`;
+
+  const statTotal = document.getElementById('stat-total-earned');
+  const statUpgrades = document.getElementById('stat-upgrades');
+  const statProducers = document.getElementById('stat-producers');
+  const statPrestige = document.getElementById('stat-prestige');
+  if (statTotal) statTotal.textContent = format(state.totalPancakes);
+  if (statUpgrades) statUpgrades.textContent = Object.values(state.upgrades).reduce((a, b) => a + b, 0);
+  if (statProducers) statProducers.textContent = Object.values(state.producers).reduce((a, b) => a + b, 0);
+  if (statPrestige) statPrestige.textContent = state.prestigePoints;
+
 }
 
 let soundContext;
@@ -518,7 +544,8 @@ function tick() {
   if (increment > 0) {
     state.pancakes += increment;
     state.totalPancakes += increment;
-    render();
+    updateHUDNumbers();
+    if (now - lastRenderAt > 300) render();
   }
   requestAnimationFrame(tick);
 }
