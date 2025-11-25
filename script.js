@@ -124,7 +124,6 @@ const elements = {
   statsTab: document.getElementById('tab-stats'),
   settingsTab: document.getElementById('tab-settings'),
   floatingTextContainer: document.getElementById('floating-text-container'),
-  tooltip: document.getElementById('tooltip'),
   toggleSound: document.getElementById('pulse-sound'),
 };
 
@@ -320,10 +319,7 @@ function renderUpgrades() {
     btn.disabled = !affordable;
     btn.addEventListener('click', () => {
       buyUpgrade(upgrade.id);
-      hideTooltip();
     });
-    card.addEventListener('mousemove', (e) => showTooltip(e, upgrade.description));
-    card.addEventListener('mouseleave', hideTooltip);
     elements.upgradesTab.appendChild(card);
   });
 }
@@ -348,12 +344,7 @@ function renderProducers() {
     `;
     card.querySelector('button').addEventListener('click', () => {
       buyProducer(producer.id);
-      hideTooltip();
     });
-    card.addEventListener('mousemove', (e) =>
-      showTooltip(e, `Cost scales by 15%. Current cost: ${format(cost)}`)
-    );
-    card.addEventListener('mouseleave', hideTooltip);
     elements.producersTab.appendChild(card);
   });
 }
@@ -479,19 +470,6 @@ function playUiSound() {
   o.connect(g).connect(soundContext.destination);
   o.start();
   o.stop(soundContext.currentTime + 0.3);
-}
-
-function showTooltip(event, text) {
-  elements.tooltip.textContent = text;
-  elements.tooltip.style.opacity = 1;
-  elements.tooltip.style.transform = 'translateY(0)';
-  elements.tooltip.style.left = event.pageX + 12 + 'px';
-  elements.tooltip.style.top = event.pageY + 12 + 'px';
-}
-
-function hideTooltip() {
-  elements.tooltip.style.opacity = 0;
-  elements.tooltip.style.transform = 'translateY(6px)';
 }
 
 function initTabs() {

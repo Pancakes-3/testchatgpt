@@ -425,21 +425,6 @@ body {
   transition: width 0.3s ease;
 }
 
-.tooltip {
-  position: fixed;
-  background: #3d220f;
-  color: white;
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 20;
-  max-width: 280px;
-}
-
 .floating-text-container {
   position: absolute;
   inset: 0;
