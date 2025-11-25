@@ -11,6 +11,8 @@ const state = {
   lastUpdate: Date.now(),
 };
 
+const EPSILON = 0.01;
+
 const upgrades = [
   {
     id: 'fluffy',
@@ -140,11 +142,27 @@ function loadState() {
     const parsed = JSON.parse(saved);
     Object.assign(state, parsed);
   }
+  sanitizeNumbers();
   state.upgrades = state.upgrades || {};
   state.producers = state.producers || {};
   state.soundOn = state.soundOn ?? true;
   state.lastUpdate = Date.now();
   migrateUpgrades();
+}
+
+function sanitizeNumbers() {
+  const numericKeys = [
+    ['pancakes', 0],
+    ['totalPancakes', 0],
+    ['clickValue', 1],
+    ['perSecond', 0],
+    ['prestigePoints', 0],
+    ['prestigeBonus', 1],
+  ];
+  numericKeys.forEach(([key, fallback]) => {
+    const value = Number(state[key]);
+    state[key] = Number.isFinite(value) ? value : fallback;
+  });
 }
 
 function saveState() {
@@ -271,8 +289,8 @@ function buyUpgrade(id) {
   if (!upgrade) return;
   const level = getUpgradeLevel(id);
   const cost = upgradeCost(upgrade, level);
-  if (state.pancakes < cost) return;
-  state.pancakes -= cost;
+  if (!hasEnough(cost)) return;
+  spend(cost);
   state.upgrades[id] = level + 1;
   render();
   playUiSound();
@@ -283,12 +301,20 @@ function buyProducer(id) {
   if (!producer) return;
   const count = state.producers[id] || 0;
   const cost = costWithScaling(producer.baseCost, count);
-  if (state.pancakes < cost) return;
-  state.pancakes -= cost;
+  if (!hasEnough(cost)) return;
+  spend(cost);
   state.producers[id] = count + 1;
   playUiSound();
   updatePerSecond();
   render();
+}
+
+function spend(cost) {
+  state.pancakes = Math.max(0, state.pancakes - cost);
+}
+
+function hasEnough(cost) {
+  return state.pancakes + EPSILON >= cost;
 }
 
 function renderUpgrades() {
@@ -300,7 +326,7 @@ function renderUpgrades() {
     card.className = 'card';
     const level = getUpgradeLevel(upgrade.id);
     const cost = upgradeCost(upgrade, level);
-    const affordable = state.pancakes >= cost;
+    const affordable = hasEnough(cost);
     const nextEffect = describeUpgradeEffect(upgrade, level + 1);
     const currentEffect = describeUpgradeEffect(upgrade, level);
     card.innerHTML = `
@@ -340,7 +366,7 @@ function renderProducers() {
         <div class="tag">${count} owned</div>
         <div class="tag">${rate.toFixed(1)} /s each</div>
       </div>
-      <button ${state.pancakes < cost ? 'disabled' : ''}>Buy for ${format(cost)}<br/>pp</button>
+      <button ${!hasEnough(cost) ? 'disabled' : ''}>Buy for ${format(cost)}<br/>pp</button>
     `;
     card.querySelector('button').addEventListener('click', () => {
       buyProducer(producer.id);
