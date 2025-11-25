@@ -535,6 +535,8 @@ function initFloatingBackground() {
     bubble.style.top = Math.random() * 100 + '%';
     bubble.style.filter = 'blur(1px)';
     bubble.style.animation = `float ${6 + Math.random() * 6}s infinite ease-in-out`;
+    bubble.style.pointerEvents = 'none';
+    bubble.style.zIndex = '0';
     document.body.appendChild(bubble);
   }
   const style = document.createElement('style');
