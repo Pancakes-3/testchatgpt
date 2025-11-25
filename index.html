@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pancake Peaks - Incremental Stack</title>
+  <link rel="stylesheet" href="./node_modules/@fontsource/inter/400.css">
+  <link rel="stylesheet" href="./node_modules/@fontsource/inter/600.css">
+  <link rel="stylesheet" href="./node_modules/@fontsource/baloo-2/400.css">
+  <link rel="stylesheet" href="./node_modules/@fontsource/baloo-2/600.css">
+  <link rel="stylesheet" href="./node_modules/@fontsource/baloo-2/700.css">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="background-glow"></div>
+  <header class="topbar">
+    <div class="title">
+      <div class="logo">🥞</div>
+      <div>
+        <h1>Pancake Peaks</h1>
+        <p class="subtitle">Stack, sizzle, and syrup your way to breakfast glory.</p>
+      </div>
+    </div>
+    <div class="top-stats">
+      <div class="stat-card">
+        <div class="label">Pancake Points</div>
+        <div id="pancake-count" class="value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Per Second</div>
+        <div id="pps" class="value">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Prestige Bonus</div>
+        <div id="prestige-bonus" class="value">x1</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="pancake-area">
+      <div id="pancake-stack" class="pancake-stack" title="Click to earn Pancake Points!">
+        <div class="steam steam-a"></div>
+        <div class="steam steam-b"></div>
+        <div class="steam steam-c"></div>
+        <div class="butter"></div>
+        <div class="syrup"></div>
+        <div class="sparkle sparkle-1"></div>
+        <div class="sparkle sparkle-2"></div>
+        <div class="sparkle sparkle-3"></div>
+      </div>
+      <div class="click-readout">
+        <span id="click-value">+1 per click</span>
+        <button id="pulse-sound" class="ghost-button">🔊 Toggle Sound</button>
+      </div>
+      <div class="floating-text-container" id="floating-text-container"></div>
+    </section>
+
+    <section class="panel tabs">
+      <div class="tab-buttons">
+        <button class="tab-button active" data-tab="upgrades">Upgrades</button>
+        <button class="tab-button" data-tab="producers">Producers</button>
+        <button class="tab-button" data-tab="prestige">Prestige</button>
+        <button class="tab-button" data-tab="stats">Stats</button>
+        <button class="tab-button" data-tab="settings">Settings</button>
+      </div>
+
+      <div class="tab-content" id="tab-upgrades"></div>
+      <div class="tab-content hidden" id="tab-producers"></div>
+      <div class="tab-content hidden" id="tab-prestige"></div>
+      <div class="tab-content hidden" id="tab-stats"></div>
+      <div class="tab-content hidden" id="tab-settings"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
