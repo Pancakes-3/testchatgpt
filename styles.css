@@ -24,6 +24,7 @@ body {
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
+  isolation: isolate;
 }
 
 .background-glow {
@@ -115,6 +116,7 @@ body {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--border);
+  z-index: 2;
 }
 
 .pancake-stack {
@@ -297,6 +299,8 @@ body {
   padding: 18px;
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
+  position: relative;
+  z-index: 2;
 }
 
 .tab-buttons {
