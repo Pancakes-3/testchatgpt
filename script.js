@@ -16,46 +16,56 @@ const upgrades = [
     id: 'fluffy',
     name: 'Fluffy Batter',
     icon: '🥞',
-    description: '+1 Pancake per click. Unlocks at 15 pancakes.',
-    cost: 15,
-    type: 'click',
+    description: 'Each level folds in +1 pancake per click.',
+    baseCost: 15,
+    scaling: 1.18,
+    type: 'click-add',
     value: 1,
+    unlockAt: 12,
   },
   {
     id: 'mapleDrizzle',
     name: 'Maple Drizzle',
     icon: '🍁',
-    description: 'Clicking is 2x sweeter.',
-    cost: 60,
+    description: 'A sweet drizzle that boosts clicks by +20% per level.',
+    baseCost: 80,
+    scaling: 1.35,
     type: 'click-mult',
-    value: 2,
+    value: 0.2,
+    unlockAt: 40,
   },
   {
     id: 'nonStick',
     name: 'Non-Stick Griddle',
     icon: '🍳',
-    description: 'All producers work 1.5x faster.',
-    cost: 150,
+    description: 'Keeps producers gliding +15% faster each level.',
+    baseCost: 200,
+    scaling: 1.32,
     type: 'producer-mult',
-    value: 1.5,
+    value: 0.15,
+    unlockAt: 120,
   },
   {
     id: 'whippedCream',
     name: 'Whipped Cream Peak',
     icon: '🍨',
-    description: 'Clicks splash +5 pancakes.',
-    cost: 500,
-    type: 'click',
+    description: 'Rich cream dollops +5 pancakes per level.',
+    baseCost: 600,
+    scaling: 1.38,
+    type: 'click-add',
     value: 5,
+    unlockAt: 420,
   },
   {
     id: 'goldenSyrup',
     name: 'Golden Syrup',
     icon: '🥇',
-    description: 'Producers drip an extra +50% syrup.',
-    cost: 1200,
+    description: 'Golden flow grants +25% producer output per level.',
+    baseCost: 1500,
+    scaling: 1.45,
     type: 'producer-mult',
-    value: 1.5,
+    value: 0.25,
+    unlockAt: 900,
   },
 ];
 
@@ -135,6 +145,7 @@ function loadState() {
   state.producers = state.producers || {};
   state.soundOn = state.soundOn ?? true;
   state.lastUpdate = Date.now();
+  migrateUpgrades();
 }
 
 function saveState() {
@@ -159,16 +170,32 @@ function calculatePrestigeGain() {
   return Math.floor(Math.pow(state.totalPancakes / 2000, 0.55));
 }
 
+function migrateUpgrades() {
+  // convert legacy boolean saves into level counts
+  for (const key of Object.keys(state.upgrades)) {
+    if (state.upgrades[key] === true) state.upgrades[key] = 1;
+  }
+}
+
 function costWithScaling(base, count) {
   return Math.ceil(base * Math.pow(1.15, count));
+}
+
+function upgradeCost(upgrade, level) {
+  return Math.ceil(upgrade.baseCost * Math.pow(upgrade.scaling, level));
+}
+
+function getUpgradeLevel(id) {
+  return state.upgrades[id] || 0;
 }
 
 function getProducerMultiplier() {
   let mult = 1;
   for (const id of Object.keys(state.upgrades)) {
+    const level = getUpgradeLevel(id);
     const upgrade = upgrades.find((u) => u.id === id);
     if (upgrade && upgrade.type === 'producer-mult') {
-      mult *= upgrade.value;
+      mult *= Math.pow(1 + upgrade.value, level);
     }
   }
   return mult;
@@ -187,13 +214,25 @@ function updatePerSecond() {
 }
 
 function getClickValue() {
-  let value = state.clickValue * state.prestigeBonus;
+  let base = state.clickValue;
+  let additive = 0;
+  let mult = 1;
   for (const id of Object.keys(state.upgrades)) {
+    const level = getUpgradeLevel(id);
     const upgrade = upgrades.find((u) => u.id === id);
-    if (upgrade && upgrade.type === 'click') value += upgrade.value;
-    if (upgrade && upgrade.type === 'click-mult') value *= upgrade.value;
+    if (!upgrade || level === 0) continue;
+    if (upgrade.type === 'click-add') additive += level * upgrade.value;
+    if (upgrade.type === 'click-mult') mult *= Math.pow(1 + upgrade.value, level);
   }
-  return value;
+  return (base + additive) * mult * state.prestigeBonus;
+}
+
+function describeUpgradeEffect(upgrade, level) {
+  if (level === 0) return 'No bonus yet';
+  if (upgrade.type === 'click-add') return `+${(level * upgrade.value).toFixed(1)} click power`;
+  if (upgrade.type === 'click-mult') return `x${Math.pow(1 + upgrade.value, level).toFixed(2)} click multiplier`;
+  if (upgrade.type === 'producer-mult') return `x${Math.pow(1 + upgrade.value, level).toFixed(2)} producer output`;
+  return '';
 }
 
 function addPancakes(amount) {
@@ -230,10 +269,12 @@ function spawnFloatingText(event, text) {
 
 function buyUpgrade(id) {
   const upgrade = upgrades.find((u) => u.id === id);
-  if (!upgrade || state.upgrades[id]) return;
-  if (state.pancakes < upgrade.cost) return;
-  state.pancakes -= upgrade.cost;
-  state.upgrades[id] = true;
+  if (!upgrade) return;
+  const level = getUpgradeLevel(id);
+  const cost = upgradeCost(upgrade, level);
+  if (state.pancakes < cost) return;
+  state.pancakes -= cost;
+  state.upgrades[id] = level + 1;
   render();
   playUiSound();
 }
@@ -254,24 +295,33 @@ function buyProducer(id) {
 function renderUpgrades() {
   elements.upgradesTab.innerHTML = '';
   upgrades.forEach((upgrade) => {
-    const unlocked = state.totalPancakes >= upgrade.cost * 0.6;
+    const unlocked = state.totalPancakes >= (upgrade.unlockAt ?? upgrade.baseCost * 0.5);
     if (!unlocked) return;
     const card = document.createElement('div');
     card.className = 'card';
-    const owned = state.upgrades[upgrade.id];
-    const affordable = state.pancakes >= upgrade.cost;
+    const level = getUpgradeLevel(upgrade.id);
+    const cost = upgradeCost(upgrade, level);
+    const affordable = state.pancakes >= cost;
+    const nextEffect = describeUpgradeEffect(upgrade, level + 1);
+    const currentEffect = describeUpgradeEffect(upgrade, level);
     card.innerHTML = `
       <div class="icon">${upgrade.icon}</div>
       <div>
         <h3>${upgrade.name}</h3>
         <p>${upgrade.description}</p>
-        <div class="tag">Cost: ${format(upgrade.cost)} pp</div>
+        <div class="tag">Level ${level}</div>
+        <div class="tag">Current: ${currentEffect}</div>
+        <div class="tag">Next: ${nextEffect}</div>
+        <div class="tag">Cost: ${format(cost)} pp</div>
       </div>
-      <button ${owned ? 'disabled' : ''}>${owned ? 'Owned' : 'Purchase'}</button>
+      <button ${!affordable ? 'disabled' : ''}>${affordable ? 'Purchase' : 'Not enough pp'}</button>
     `;
     const btn = card.querySelector('button');
-    btn.disabled = owned || !affordable;
-    btn.addEventListener('click', () => buyUpgrade(upgrade.id));
+    btn.disabled = !affordable;
+    btn.addEventListener('click', () => {
+      buyUpgrade(upgrade.id);
+      hideTooltip();
+    });
     card.addEventListener('mousemove', (e) => showTooltip(e, upgrade.description));
     card.addEventListener('mouseleave', hideTooltip);
     elements.upgradesTab.appendChild(card);
@@ -296,7 +346,10 @@ function renderProducers() {
       </div>
       <button ${state.pancakes < cost ? 'disabled' : ''}>Buy for ${format(cost)}<br/>pp</button>
     `;
-    card.querySelector('button').addEventListener('click', () => buyProducer(producer.id));
+    card.querySelector('button').addEventListener('click', () => {
+      buyProducer(producer.id);
+      hideTooltip();
+    });
     card.addEventListener('mousemove', (e) =>
       showTooltip(e, `Cost scales by 15%. Current cost: ${format(cost)}`)
     );
@@ -335,7 +388,7 @@ function renderStats() {
       </div>
       <div class="stat-box">
         <div class="label">Upgrades Owned</div>
-        <div class="value">${Object.keys(state.upgrades).length}</div>
+        <div class="value">${Object.values(state.upgrades).reduce((a, b) => a + b, 0)}</div>
       </div>
       <div class="stat-box">
         <div class="label">Producers Owned</div>
